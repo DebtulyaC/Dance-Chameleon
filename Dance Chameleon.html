@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dance Chameleon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0912;
+    --bg2:#14111f;
+    --panel:#181425;
+    --line:#2a2440;
+    --magenta:#ff2e7e;
+    --cyan:#20e3d2;
+    --violet:#8b5cf6;
+    --amber:#ffc145;
+    --text:#f5f3ff;
+    --muted:#9c97b8;
+    --display: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif;
+    --body: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background: radial-gradient(circle at 50% 15%, #241c3a 0%, var(--bg) 55%, #050408 100%);
+    color:var(--text);
+    font-family:var(--body);
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  /* neon floor grid */
+  .floor{
+    position:fixed; left:0; right:0; bottom:0; height:40vh;
+    background-image:
+      linear-gradient(rgba(255,46,126,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(32,227,210,0.14) 1px, transparent 1px);
+    background-size: 42px 42px;
+    transform: perspective(320px) rotateX(62deg);
+    transform-origin: bottom;
+    opacity:0.5;
+    pointer-events:none;
+    z-index:0;
+    mask-image: linear-gradient(to top, black, transparent);
+    -webkit-mask-image: linear-gradient(to top, black, transparent);
+  }
+  .app{ position:relative; z-index:1; max-width:960px; margin:0 auto; padding:28px 20px 60px; }
+  .screen {
+    display: none;
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  .screen.active {
+    display: block;
+    animation: screenEnter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes screenEnter {
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .brand{ text-align:center; margin-bottom:6px; }
+  .brand h1{
+    font-family:var(--display); font-size:clamp(42px,9vw,84px); line-height:0.9;
+    margin:0; letter-spacing:2px;
+    background:linear-gradient(90deg,var(--magenta),var(--violet) 55%,var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow: 0 0 40px rgba(255,46,126,0.25);
+  }
+  .brand p{ font-family:var(--mono); color:var(--muted); letter-spacing:3px; text-transform:uppercase; font-size:12px; margin:4px 0 0; }
+
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--bg2));
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  input[type=text]{
+    width:100%; padding:16px 18px; border-radius:12px; border:1px solid var(--line);
+    background:#0f0c18; color:var(--text); font-family:var(--body); font-size:17px;
+    outline:none; transition:border .2s, box-shadow .2s;
+  }
+  input[type=text]:focus{ border-color:var(--cyan); box-shadow:0 0 0 3px rgba(32,227,210,0.15); }
+
+  .btn{
+    font-family:var(--display); letter-spacing:1.5px; font-size:20px;
+    padding:14px 28px; border-radius:12px; border:none; cursor:pointer;
+    color:#0a0912; background:linear-gradient(90deg,var(--cyan),var(--violet));
+    background-size:200% auto;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); text-transform:uppercase;
+    box-shadow:0 6px 20px rgba(139,92,246,0.35);
+  }
+  .btn:hover{ transform:translateY(-3px) scale(1.02); box-shadow:0 12px 30px rgba(139,92,246,0.6); background-position: right center; }
+  .btn:active{ transform:translateY(-1px) scale(0.99); }
+  .btn.secondary{
+    background:transparent; color:var(--text); border:1.5px solid var(--line);
+    box-shadow:none;
+  }
+  .btn.secondary:hover{ border-color:var(--cyan); color:#0a0912; background:var(--cyan); box-shadow:0 0 20px rgba(32,227,210,0.4); transform:translateY(-3px) scale(1.02); }
+  .btn.ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); box-shadow:none; font-size:15px; padding:10px 18px; }
+  .btn.ghost:hover { border-color:var(--magenta); color:var(--magenta); box-shadow:0 0 15px rgba(255,46,126,0.3); transform:translateY(-2px); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .menu-grid{ display:grid; gap:14px; margin-top:26px; }
+  .menu-grid .btn{ width:100%; padding:20px; font-size:24px; }
+
+  .eyebrow{ font-family:var(--mono); color:var(--cyan); font-size:12px; letter-spacing:3px; text-transform:uppercase; margin:0 0 8px; }
+
+  /* instructions */
+  .steps{ list-style:none; margin:18px 0 0; padding:0; display:grid; gap:14px; }
+  .steps li{ display:flex; gap:14px; align-items:flex-start; font-size:15.5px; color:#dcd8f0; line-height:1.5; }
+  .steps .num{
+    font-family:var(--display); font-size:24px; color:var(--magenta); min-width:34px;
+    text-shadow:0 0 12px rgba(255,46,126,0.5);
+  }
+
+  /* game screen */
+  .game-wrap{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width:760px){ .game-wrap{ grid-template-columns:1fr; } }
+
+  .panel-title{ font-family:var(--mono); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
+
+  .pose-panel, .cam-panel{
+    background:#0e0c17; border:1px solid var(--line); border-radius:16px; padding:16px;
+    position:relative; overflow:hidden;
+  }
+  .pose-panel svg{ width:100%; height:260px; display:block; }
+  #poseSvgHolder svg {
+    animation: svgEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes svgEnter {
+    from { opacity: 0; transform: scale(0.9) rotate(-3deg); }
+    to { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  .cam-panel{ display:flex; flex-direction:column; align-items:center; }
+  .cam-stage{ position:relative; width:100%; border-radius:12px; overflow:hidden; background:#000; }
+  video{ display:none; }
+  canvas#outCanvas{ width:100%; display:block; transform:scaleX(-1); background:#050508; }
+
+  .overlay-msg{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,4,10,0.72); font-family:var(--display); font-size:28px; letter-spacing:2px;
+    text-align:center; color:var(--cyan); padding:20px;
+  }
+  .countdown-num {
+    font-family: var(--display);
+    font-size: 120px;
+    color: var(--amber);
+    text-shadow: 0 0 40px rgba(255, 193, 69, 0.6);
+    animation: countdownPulse 0.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  @keyframes countdownPulse {
+    0% { transform: scale(1.3); opacity: 0; }
+    15% { transform: scale(1); opacity: 1; }
+    85% { transform: scale(0.95); opacity: 1; }
+    100% { transform: scale(0.85); opacity: 0; }
+  }
+
+  .hud{ display:flex; gap:14px; align-items:center; justify-content:space-between; margin-top:16px; flex-wrap:wrap; }
+  .hud .stat{ font-family:var(--mono); font-size:13px; color:var(--muted); }
+  .hud .stat b{ color:var(--text); font-size:20px; display:block; }
+
+  .meter{ height:14px; border-radius:8px; background:#181425; border:1px solid var(--line); overflow:hidden; margin-top:10px; }
+  .meter-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--magenta),var(--cyan)); transition:width .1s linear; position:relative; box-shadow:0 0 8px var(--cyan); }
+  .meter-label{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; }
+
+  .level-pill{ display:inline-block; font-family:var(--mono); font-size:12px; padding:6px 14px; border-radius:999px; border:1px solid var(--violet); color:var(--violet); letter-spacing:2px; text-transform:uppercase; }
+
+  .flash-success {
+    position: absolute;
+    inset: 0;
+    background: rgba(32, 227, 210, 0.2);
+    border: 3px solid var(--cyan);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--display);
+    font-size: 40px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px rgba(32,227,210,0.8);
+    animation: flashSuccessAnim 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  }
+  @keyframes flashSuccessAnim {
+    0% { opacity: 0; transform: scale(1.1); background: rgba(32, 227, 210, 0.4); }
+    20% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.9); background: rgba(32, 227, 210, 0); }
+  }
+
+  /* ---- Meme Overlay ---- */
+  #memeOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    backdrop-filter: blur(10px) brightness(0.55);
+    -webkit-backdrop-filter: blur(10px) brightness(0.55);
+    background: rgba(5, 4, 10, 0.65);
+    animation: memeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes memeIn {
+    from { opacity: 0; transform: scale(1.06); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  #memeOverlay.hiding {
+    animation: memeOut 0.3s ease-in forwards;
+  }
+  @keyframes memeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.9); }
+  }
+  #memeBox {
+    background: linear-gradient(135deg, #1a1030 0%, #0f0c1e 100%);
+    border: 3px solid var(--amber);
+    border-radius: 22px;
+    padding: 24px 32px;
+    max-width: 90vw;
+    max-height: 90vh;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255,193,69,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #memeMatchedLabel {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 6px;
+  }
+  #memePoseName {
+    font-family: var(--display);
+    font-size: clamp(28px, 4.5vw, 48px);
+    color: var(--amber);
+    text-shadow: 0 0 25px rgba(255,193,69,0.7);
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    line-height: 1;
+  }
+  #memeImg {
+    max-width: min(420px, 78vw);
+    max-height: min(420px, 52vh);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 3px solid var(--amber);
+    box-shadow: 0 0 40px rgba(255,193,69,0.5);
+    display: block;
+    margin: 0 auto 14px;
+    animation: memeImgPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes memeImgPop {
+    from { opacity: 0; transform: scale(0.88) rotate(-2deg); }
+    to   { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  #memeBar {
+    width: 0%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    border-radius: 3px;
+    transition: width linear;
+    margin-top: 4px;
+  }
+
+  /* results & leaderboard */
+  table{ width:100%; border-collapse:collapse; margin-top:18px; }
+  th{ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:2px; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+  td{ padding:12px; font-family:var(--body); font-size:14.5px; border-bottom:1px solid var(--line); }
+  tr.me td{ color:var(--cyan); font-weight:700; }
+  .rank1{ color:var(--amber); font-family:var(--display); font-size:20px; }
+  .rank2{ color:#c7c7d9; font-family:var(--display); font-size:19px; }
+  .rank3{ color:#d0895b; font-family:var(--display); font-size:19px; }
+
+  .results-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:22px 0; }
+  @media(max-width:600px){ .results-grid{ grid-template-columns:1fr; } }
+  .stat-box{ background:#0e0c17; border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center; }
+  .stat-box .val{ font-family:var(--display); font-size:38px; color:var(--magenta); }
+  .stat-box .lab{ font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; margin-top:4px; }
+
+  .row-actions{ display:flex; gap:12px; margin-top:24px; flex-wrap:wrap; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .who{ font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .who b{ color:var(--cyan); }
+
+  .err{ background:rgba(255,46,126,0.1); border:1px solid var(--magenta); color:#ffc9db; padding:14px 16px; border-radius:10px; font-size:14px; margin-top:14px; }
+  .fileinfo{ font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:10px; }
+  .fileinfo b{ color:var(--amber); }
+
+  #confettiCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Segmented control toggle */
+  .segmented-control {
+    display: flex;
+    background: #0f0c18;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px;
+    margin-top: 18px;
+  }
+  .segmented-control input[type="radio"] {
+    display: none;
+  }
+  .segmented-control label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  .segmented-control input[type="radio"]:checked + label {
+    background: linear-gradient(90deg, var(--cyan), var(--violet));
+    color: #0a0912;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.25);
+  }
+
+  /* Pose library gallery styling */
+  .pose-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .pose-gallery::-webkit-scrollbar {
+    width: 6px;
+  }
+  .pose-gallery::-webkit-scrollbar-track {
+    background: #0f0c18;
+    border-radius: 4px;
+  }
+  .pose-gallery::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+  .pose-gallery::-webkit-scrollbar-thumb:hover {
+    background: var(--violet);
+  }
+  .gallery-item {
+    background: #0e0c17;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .gallery-item:hover {
+    border-color: var(--cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(32, 227, 210, 0.15);
+  }
+  .gallery-item svg {
+    width: 100%;
+    height: 90px;
+    display: block;
+  }
+  .gallery-item span {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #poseName {
+    font-family: var(--display);
+    font-size: 34px;
+    color: var(--cyan);
+    margin: 4px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px rgba(32, 227, 210, 0.6);
+    animation: neonPulse 2s ease-in-out infinite alternate;
+    text-align: center;
+  }
+  @keyframes neonPulse {
+    from { text-shadow: 0 0 6px rgba(32, 227, 210, 0.4), 0 0 1px rgba(32, 227, 210, 0.2); }
+    to { text-shadow: 0 0 14px rgba(32, 227, 210, 0.8), 0 0 4px rgba(32, 227, 210, 0.5); }
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+<!-- Meme overlay -->
+<div id="memeOverlay">
+  <div id="memeBox">
+    <div id="memeMatchedLabel">✅ Pose Matched!</div>
+    <div id="memePoseName"></div>
+    <img id="memeImg" src="" alt="meme" />
+    <div id="memeBar"></div>
+  </div>
+</div>
+<div class="floor"></div>
+<div class="app">
+
+  <!-- USERNAME SCREEN -->
+  <section class="screen active" id="screen-username">
+    <div class="brand"><h1>Dance Chameleon</h1><p>Mirror the move · Beat the clock</p></div>
+    <div class="card" style="max-width:440px;margin:34px auto 0;">
+      <p class="eyebrow">Player Setup</p>
+      <input type="text" id="usernameInput" placeholder="Enter your dancer name" maxlength="20" autocomplete="off">
+      <div class="err" id="usernameErr" style="display:none;">Give yourself a name — even a one-word alias works.</div>
+      
+      <p class="eyebrow" style="margin-top:20px;margin-bottom:6px;">Tracking Mode</p>
+      <div class="segmented-control">
+        <input type="radio" name="trackingMode" id="modeHips" value="hips" checked>
+        <label for="modeHips">Head to Hips</label>
+        <input type="radio" name="trackingMode" id="modeChest" value="chest">
+        <label for="modeChest">Head to Chest</label>
+      </div>
+      
+      <button class="btn" style="width:100%;margin-top:20px;" id="btnEnterHome">Start Game</button>
+    </div>
+  </section>
+
+  <!-- HOME SCREEN -->
+  <section class="screen" id="screen-home">
+    <div class="topbar">
+      <div class="brand" style="text-align:left;margin:0;"><h1 style="font-size:34px;">Dance Chameleon</h1></div>
+      <div class="who">Dancer: <b id="homeUsername"></b></div>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Main Menu</p>
+      <div class="menu-grid">
+        <button class="btn" id="btnStartGame">▶ Start Game</button>
+        <button class="btn secondary" id="btnInstructions">Instructions</button>
+        <button class="btn secondary" id="btnLeaderboard">Leaderboard</button>
+        <button class="btn ghost" id="btnChangeName">Change dancer name</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <p class="eyebrow" id="poseListTitle">Pose Library</p>
+      <div class="pose-gallery" id="poseGallery"></div>
+    </div>
+  </section>
+
+  <!-- INSTRUCTIONS -->
+  <section class="screen" id="screen-instructions">
+    <div class="card">
+      <p class="eyebrow">How To Play</p>
+      <h2 style="font-family:var(--display);font-size:32px;margin:0 0 4px;letter-spacing:1px;">Get In Position</h2>
+      <ol class="steps">
+        <li><span class="num">01</span>Allow camera access and frame your upper body — head down to your hips — in the shot. Legs don't matter for this game.</li>
+        <li><span class="num">02</span>Each level shows a glowing target pose. Study the arm positions before the countdown ends.</li>
+        <li><span class="num">03</span>When the timer starts, strike the pose and hold it. A live match meter shows how close your arms are.</li>
+        <li><span class="num">04</span>Hit 80% similarity or higher, held steady for a moment, to clear the level — the faster, the better.</li>
+        <li><span class="num">05</span>Clear all levels to lock in your total time and average accuracy, then save your run to a leaderboard file on your computer.</li>
+      </ol>
+      <div class="row-actions"><button class="btn secondary" id="btnBackFromInstructions">Back to Menu</button></div>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section class="screen" id="screen-game">
+    <div class="topbar">
+      <span class="level-pill" id="levelPill">Pose 1 of 5</span>
+      <div class="who">Dancer: <b id="gameUsername"></b></div>
+    </div>
+    <div class="game-wrap">
+      <div class="pose-panel" style="text-align:center;">
+        <p class="panel-title" style="margin-bottom:2px;">Target Pose</p>
+        <h2 id="poseName"></h2>
+        <div id="poseSvgHolder"></div>
+      </div>
+      <div class="cam-panel">
+        <p class="panel-title" style="align-self:flex-start;">Your Move</p>
+        <div class="cam-stage">
+          <video id="video" playsinline></video>
+          <canvas id="outCanvas" width="480" height="360"></canvas>
+          <div class="overlay-msg" id="overlayMsg" style="display:none;"></div>
+          <div class="flash-success" id="flashSuccess" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="hud">
+        <div class="stat">Elapsed<b id="hudTimer">0.0s</b></div>
+        <div class="stat">Match<b id="hudMatch">0%</b></div>
+        <div class="stat">Poses cleared<b id="hudCleared">0 / 5</b></div>
+        <button class="btn secondary" id="btnSkipPose">Change Pose</button>
+        <button class="btn ghost" id="btnQuitGame">Quit to menu</button>
+      </div>
+      <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+      <div class="meter-label"><span>0%</span><span id="thresholdLabel">clear at 80%</span><span>100%</span></div>
+      <div class="err" id="gameErr" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="screen" id="screen-results">
+    <div class="card">
+      <p class="eyebrow">Run Complete</p>
+      <h2 style="font-family:var(--display);font-size:40px;margin:0;letter-spacing:1px;">Nailed It, <span id="resultsName"></span></h2>
+      <div class="results-grid">
+        <div class="stat-box"><div class="val" id="resTotalTime">0.0s</div><div class="lab">Total Time</div></div>
+        <div class="stat-box"><div class="val" id="resAvgAcc">0%</div><div class="lab">Avg Accuracy</div></div>
+        <div class="stat-box"><div class="val" id="resLevels">0/5</div><div class="lab">Poses Cleared</div></div>
+      </div>
+      <div class="row-actions">
+        <button class="btn" id="btnSaveScore">Save &amp; View Leaderboard</button>
+        <button class="btn secondary" id="btnPlayAgain">Play Again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section class="screen" id="screen-leaderboard">
+    <div class="card">
+      <p class="eyebrow">Rankings</p>
+      <h2 style="font-family:var(--display);font-size:34px;margin:0 0 4px;letter-spacing:1px;">Leaderboard</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0;">Ranked by fastest total time across all cleared poses.</p>
+      <table id="lbTable">
+        <thead><tr><th>#</th><th>Dancer</th><th>Time</th><th>Accuracy</th><th>Poses</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+      <div class="err" id="lbEmpty" style="display:none;">No runs saved yet — be the first to clear all poses!</div>
+      <div class="fileinfo" id="fileInfo"></div>
+      <div class="row-actions">
+        <button class="btn danger" id="btnClearLb" style="background:#ff2e7e;color:#0a0912;border:none;">Clear Leaderboard</button>
+        <button class="btn secondary" id="btnBackFromLb">Back to Menu</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+
+  /* ---------------- Screen management ---------------- */
+  const screens = {};
+  document.querySelectorAll('.screen').forEach(s => screens[s.id] = s);
+  function show(id){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[id].classList.add('active');
+    if (id === 'screen-home') {
+      renderPoseLibrary();
+    }
+  }
+
+  function renderPoseLibrary() {
+    const gallery = document.getElementById('poseGallery');
+    if (!gallery) return;
+    const library = state.trackingMode === 'chest' ? LEVELS_CHEST : LEVELS_HIPS;
+    const modeLabel = state.trackingMode === 'chest' ? 'Chest Poses' : 'Hips Poses';
+    document.getElementById('poseListTitle').textContent = `Pose Library (${modeLabel} - ${library.length} Poses)`;
+    
+    gallery.innerHTML = '';
+    library.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'gallery-item';
+      item.innerHTML = `${p.svg}<span>${p.name}</span>`;
+      gallery.appendChild(item);
+    });
+  }
+
+
+  /* ---------------- Sound Synthesizer (Web Audio API) ---------------- */
+  const Sound = {
+    ctx: null,
+    init() {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    },
+    playClick() {
+      this.init();
+      const ctx = this.ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+      
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    },
+    playBeep(isHigh = false) {
+      this.init();
+      const ctx = this.ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'triangle';
+      const freq = isHigh ? 1000 : 500;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    },
+    playSuccess() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+        
+        gain.gain.setValueAtTime(0.08, now + idx * 0.06);
+        gain.gain.linearRampToValueAtTime(0, now + idx * 0.06 + 0.15);
+        
+        osc.start(now + idx * 0.06);
+        osc.stop(now + idx * 0.06 + 0.15);
+      });
+    },
+    playLevelComplete() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+        
+        gain.gain.setValueAtTime(0.12, now + idx * 0.05);
+        gain.gain.linearRampToValueAtTime(0, now + idx * 0.05 + 0.2);
+        
+        osc.start(now + idx * 0.05);
+        osc.stop(now + idx * 0.05 + 0.2);
+      });
+    },
+    playVictoryFanfare() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const chords = [
+        [261.63, 329.63, 392.00], // C4, E4, G4 (C major)
+        [349.23, 440.00, 523.25], // F4, A4, C5 (F major)
+        [392.00, 493.88, 587.33], // G4, B4, D5 (G major)
+        [523.25, 659.25, 783.99, 1046.50] // C5, E5, G5, C6 (C major high)
+      ];
+      chords.forEach((chord, chordIdx) => {
+        const startTime = now + chordIdx * 0.35;
+        const duration = chordIdx === 3 ? 1.2 : 0.3;
+        chord.forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, startTime);
+          
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1500, startTime);
+          
+          osc.disconnect();
+          osc.connect(filter);
+          filter.connect(gain);
+          
+          gain.gain.setValueAtTime(0.05, startTime);
+          gain.gain.linearRampToValueAtTime(0, startTime + duration);
+          
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        });
+      });
+      
+      this.playApplause(now, 5.0);
+    },
+    playApplause(startTime, duration) {
+      const ctx = this.ctx;
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1000, startTime);
+      filter.Q.setValueAtTime(1.0, startTime);
+      
+      const gain = ctx.createGain();
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      
+      gain.gain.setValueAtTime(0.0, startTime);
+      gain.gain.linearRampToValueAtTime(0.08, startTime + 0.5);
+      gain.gain.setValueAtTime(0.08, startTime + duration - 1.0);
+      gain.gain.linearRampToValueAtTime(0.0, startTime + duration);
+      
+      noise.start(startTime);
+      noise.stop(startTime + duration);
+    },
+    playConfettiPop() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+      oscGain.gain.setValueAtTime(0.2, now);
+      oscGain.gain.linearRampToValueAtTime(0, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+      
+      const bufferSize = ctx.sampleRate * 0.1;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1200, now);
+      
+      const noiseGain = ctx.createGain();
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      
+      noiseGain.gain.setValueAtTime(0.1, now);
+      noiseGain.gain.linearRampToValueAtTime(0, now + 0.1);
+      
+      noise.start(now);
+      noise.stop(now + 0.1);
+    },
+    /* ---- Meme Sound Synthesizers ---- */
+    playVineBoom() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(130, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.5);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+
+      const bufSize = ctx.sampleRate * 0.15;
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(250, now);
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.25, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+    },
+    playAirhorn() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const timings = [0, 0.08, 0.20];
+      const durations = [0.06, 0.06, 0.35];
+      timings.forEach((t, i) => {
+        const start = now + t;
+        const dur = durations[i];
+        [466.16, 622.25, 698.46].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.05, start);
+          gain.gain.linearRampToValueAtTime(0, start + dur);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + dur);
+        });
+      });
+    },
+    playBonk() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.22);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    },
+    playWhaWha() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [
+        { f: 146.83, d: 0.22, t: 0 },
+        { f: 138.59, d: 0.22, t: 0.22 },
+        { f: 130.81, d: 0.22, t: 0.44 },
+        { f: 123.47, d: 0.65, t: 0.66, slide: true }
+      ];
+      notes.forEach(n => {
+        const start = now + n.t;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(n.f, start);
+        if (n.slide) osc.frequency.linearRampToValueAtTime(95, start + n.d);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(350, start);
+        filter.frequency.linearRampToValueAtTime(750, start + n.d * 0.5);
+        filter.frequency.linearRampToValueAtTime(250, start + n.d);
+        gain.gain.setValueAtTime(0.08, start);
+        gain.gain.linearRampToValueAtTime(0, start + n.d);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + n.d);
+      });
+    },
+    playSlideWhistle() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(1400, now + 0.25);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.55);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.55);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.55);
+    },
+    playMagicChime() {
+      this.init();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const notes = [1046.50, 1318.51, 1567.98, 2093.00, 2637.02];
+      notes.forEach((freq, i) => {
+        const start = now + i * 0.07;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.08, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.35);
+      });
+    },
+    playMemeForPose(poseName) {
+      const soundMap = {
+        '🙌 Victory':       'airhorn',
+        '💪 Double Biceps': 'wha_wha',
+        '✈️ T-Pose':        'vine_boom',
+        '🕺 Disco Fever':   'airhorn',
+        '🏹 Archer':        'bonk',
+        '🦸 Superman':      'slide_whistle',
+        '🤟 Rockstar':      'airhorn',
+        '🪽 Airplane Bank':  'slide_whistle',
+        '👋 Wave':          'wha_wha',
+        '🎯 Point Right':   'bonk',
+        '🎯 Point Left':    'bonk',
+        '🧍 Power Pose':    'vine_boom',
+        '🙆 Halo':          'magic_chime',
+        '🏆 Champion':      'vine_boom',
+        '🤠 Cowboy':        'bonk',
+        '🕶️ Cool Dude':     'vine_boom',
+        '🎤 Singer':        'magic_chime',
+        '🦅 Eagle Wings':   'slide_whistle',
+        '💃 Salsa':         'magic_chime',
+        '🚀 Rocket':        'slide_whistle',
+        '🥊 Boxer Guard':   'bonk',
+        '🤸 Stretch':       'wha_wha',
+        '🦸 Hero Pose':     'airhorn',
+        '🎸 Guitar Hero':   'airhorn',
+        '🙋 Raise Hand':    'magic_chime'
+      };
+      const soundType = soundMap[poseName] || 'vine_boom';
+      if (soundType === 'vine_boom') this.playVineBoom();
+      else if (soundType === 'airhorn') this.playAirhorn();
+      else if (soundType === 'bonk') this.playBonk();
+      else if (soundType === 'wha_wha') this.playWhaWha();
+      else if (soundType === 'slide_whistle') this.playSlideWhistle();
+      else if (soundType === 'magic_chime') this.playMagicChime();
+    }
+  };
+
+  /* ---------------- Background Music Loader ---------------- */
+  const Music = {
+    audio: null,
+    isPlaying: false,
+    init() {
+      if (!this.audio) {
+        this.audio = new Audio('https://labs.phaser.io/assets/audio/bodenstaendig_2000_in_rock_4bit.mp3');
+        this.audio.loop = true;
+        this.audio.volume = 0.2;
+      }
+    },
+    play() {
+      this.init();
+      if (!this.isPlaying) {
+        this.audio.currentTime = 0;
+        this.audio.play().then(() => {
+          this.isPlaying = true;
+        }).catch(err => {
+          console.warn("BGM autoplay delayed until user click:", err);
+        });
+      }
+    },
+    stop() {
+      if (this.audio && this.isPlaying) {
+        this.audio.pause();
+        this.isPlaying = false;
+      }
+    },
+    fadeOut(duration = 1500) {
+      if (!this.audio || !this.isPlaying) return;
+      const startVol = this.audio.volume;
+      const interval = 50;
+      const steps = duration / interval;
+      let step = 0;
+      const timer = setInterval(() => {
+        step++;
+        const val = startVol * (1 - step / steps);
+        if (val <= 0) {
+          clearInterval(timer);
+          this.stop();
+          this.audio.volume = startVol; // Restore
+        } else {
+          this.audio.volume = val;
+        }
+      }, interval);
+    }
+  };
+
+  /* ---------------- Level definitions (upper body only) ---------------- */
+  function stick(p){
+    const hipY = 150;
+    const hip=[100,hipY], hipL=[85,hipY], hipR=[115,hipY];
+    const head=[100,45], neck=[100,63], shL=[78,68], shR=[122,68];
+    const seg = (a,b) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="bone"/>`;
+    return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3.4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#glow)" fill="none" stroke="#ff2e7e" stroke-width="6" stroke-linecap="round">
+        <circle cx="${head[0]}" cy="${head[1]}" r="18" stroke="#20e3d2" stroke-width="5" fill="#0e0c17"/>
+        ${seg(neck,hip)}
+        ${seg(shL,hipL)}
+        ${seg(shR,hipR)}
+        ${seg(hipL,hipR)}
+        ${seg(shL,p.elbowL)}${seg(p.elbowL,p.wristL)}
+        ${seg(shR,p.elbowR)}${seg(p.elbowR,p.wristR)}
+      </g>
+    </svg>`;
+  }
+
+  function makePose(name, shL_deg, shR_deg, elL_deg, elR_deg, tol = 25) {
+    const radShL = shL_deg * Math.PI / 180;
+    const radShR = shR_deg * Math.PI / 180;
+    
+    // Elbow bends
+    const radElL = elL_deg * Math.PI / 180;
+    const radElR = elR_deg * Math.PI / 180;
+    
+    // Absolute angles for wrists
+    const radWrL = radShL + (Math.PI - radElL);
+    const radWrR = radShR + (Math.PI - radElR);
+    
+    const d1 = 35, d2 = 33;
+    const shL = [78, 68], shR = [122, 68];
+    
+    const elbowL = [ shL[0] - d1 * Math.sin(radShL), shL[1] + d1 * Math.cos(radShL) ];
+    const wristL = [ elbowL[0] - d2 * Math.sin(radWrL), elbowL[1] + d2 * Math.cos(radWrL) ];
+    
+    const elbowR = [ shR[0] + d1 * Math.sin(radShR), shR[1] + d1 * Math.cos(radShR) ];
+    const wristR = [ elbowR[0] + d2 * Math.sin(radWrR), elbowR[1] + d2 * Math.cos(radWrR) ];
+    
+    return {
+      name: name,
+      target: { shAngleL: shL_deg, shAngleR: shR_deg, elAngleL: elL_deg, elAngleR: elR_deg },
+      tol: { shAngleL: tol, shAngleR: tol, elAngleL: tol, elAngleR: tol },
+      svg: stick({ elbowL, wristL, elbowR, wristR })
+    };
+  }
+
+  const LEVELS_HIPS = [
+    makePose("🙌 Victory", 160, 160, 180, 180, 25),
+    makePose("💪 Double Biceps", 135, 135, 90, 90, 25),
+    makePose("✈️ T-Pose", 90, 90, 180, 180, 20),
+    makePose("🕺 Disco Fever", 50, 140, 180, 180, 25),
+    makePose("🏹 Archer", 90, 170, 180, 90, 25),
+    makePose("🦸 Superman", 170, 170, 180, 180, 25),
+    makePose("🤟 Rockstar", 120, 70, 180, 90, 25),
+    makePose("🪽 Airplane Bank", 110, 70, 180, 180, 20),
+    makePose("👋 Wave", 160, 20, 135, 180, 25),
+    makePose("🎯 Point Right", 20, 90, 180, 180, 20),
+    makePose("🎯 Point Left", 90, 20, 180, 180, 20),
+    makePose("🧍 Power Pose", 40, 40, 180, 180, 20),
+    makePose("🙆 Halo", 170, 170, 90, 90, 25),
+    makePose("🏆 Champion", 150, 110, 180, 180, 25),
+    makePose("🤠 Cowboy", 65, 65, 90, 90, 25),
+    makePose("🕶️ Cool Dude", 20, 120, 180, 90, 25),
+    makePose("🎤 Singer", 35, 160, 90, 180, 25),
+    makePose("🦅 Eagle Wings", 105, 105, 135, 135, 25),
+    makePose("💃 Salsa", 150, 50, 120, 180, 25),
+    makePose("🚀 Rocket", 180, 180, 180, 180, 20),
+    makePose("🥊 Boxer Guard", 80, 80, 60, 60, 25),
+    makePose("🤸 Stretch", 135, 180, 180, 180, 25),
+    makePose("🦸 Hero Pose", 60, 150, 180, 180, 25),
+    makePose("🎸 Guitar Hero", 80, 40, 95, 180, 25),
+    makePose("🙋 Raise Hand", 180, 20, 180, 180, 20)
+  ];
+
+  const LEVELS_CHEST = LEVELS_HIPS;
+
+  /* ---- Meme captions per pose ---- */
+  const POSE_MEMES = {
+    '🙌 Victory':       'meme_victory_1784569030400.png',
+    '💪 Double Biceps': 'meme_biceps_1784569043587.png',
+    '✈️ T-Pose':        'meme_tpose_1784569057481.png',
+    '🕺 Disco Fever':   'meme_disco_1784569143786.png',
+    '🏹 Archer':        'meme_archer_1784569083078.png',
+    '🦸 Superman':      'meme_superman_1784569109098.png',
+    '🤟 Rockstar':      'meme_rockstar_1784569120645.png',
+    '🪽 Airplane Bank':  'meme_airplane_1784569158238.png',
+    '👋 Wave':          'meme_wave_1784569171645.png',
+    '🎯 Point Right':   'meme_point_1784569182674.png',
+    '🎯 Point Left':    'meme_point_1784569182674.png',
+    '🧍 Power Pose':    'meme_power_1784569197385.png',
+    '🙆 Halo':          'meme_halo_1784648658485.png',
+    '🏆 Champion':      'meme_champion_1784648671844.png',
+    '🤠 Cowboy':        'meme_cowboy_1784648686061.png',
+    '🕶️ Cool Dude':     'meme_cooldude_1784648700257.png',
+    '🎤 Singer':        'meme_singer_1784648713159.png',
+    '🦅 Eagle Wings':   'meme_eagle_1784648726964.png',
+    '💃 Salsa':         'meme_salsa_1784648738692.png',
+    '🚀 Rocket':        'meme_rocket_1784648748057.png',
+    '🥊 Boxer Guard':   'meme_boxer_1784648760590.png',
+    '🤸 Stretch':       'meme_stretch_1784648773195.png',
+    '🦸 Hero Pose':     'meme_hero_1784648789882.png',
+    '🎸 Guitar Hero':   'meme_guitar_1784648803007.png',
+    '🙋 Raise Hand':    'meme_raisehand_1784648815785.png'
+  };
+
+  /* ---------------- App state ---------------- */
+  const state = {
+    username: '',
+    levelIndex: 0,
+    times: [],
+    accuracies: [],
+    running: false,
+    levelActive: false,
+    countdownActive: false,
+    levelStartTs: 0,
+    holdStartTs: 0,
+    lastLandmarks: null,
+    stream: null,
+    poseModel: null,
+    poseReady: false,
+    poseFailed: false,
+    rafId: null,
+    lastSendTs: 0,
+    currentRunPoses: [],
+    trackingMode: 'hips'
+  };
+
+  const RUN_SIZE = 5;
+  const THRESHOLD = 80;
+  const HOLD_MS = 450;
+
+
+  /* ---------------- Username screen ---------------- */
+  const usernameInput = document.getElementById('usernameInput');
+  document.getElementById('btnEnterHome').addEventListener('click', () => {
+    const val = usernameInput.value.trim();
+    if(!val){ document.getElementById('usernameErr').style.display='block'; return; }
+    state.username = val.slice(0,20);
+    state.trackingMode = document.querySelector('input[name="trackingMode"]:checked').value;
+    document.getElementById('usernameErr').style.display='none';
+    document.getElementById('homeUsername').textContent = state.username;
+    document.getElementById('gameUsername').textContent = state.username;
+    show('screen-home');
+  });
+  usernameInput.addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btnEnterHome').click(); });
+
+  /* ---------------- Home screen ---------------- */
+  document.getElementById('btnInstructions').addEventListener('click', () => show('screen-instructions'));
+  document.getElementById('btnBackFromInstructions').addEventListener('click', () => show('screen-home'));
+  document.getElementById('btnLeaderboard').addEventListener('click', () => { show('screen-leaderboard'); loadLeaderboard(); });
+  document.getElementById('btnBackFromLb').addEventListener('click', () => show('screen-home'));
+  document.getElementById('btnChangeName').addEventListener('click', () => { stopEverything(true); show('screen-username'); usernameInput.value=''; usernameInput.focus(); });
+  document.getElementById('btnStartGame').addEventListener('click', startNewRun);
+  document.getElementById('btnPlayAgain').addEventListener('click', startNewRun);
+  document.getElementById('btnQuitGame').addEventListener('click', () => { stopEverything(true); show('screen-home'); });
+
+  function getRandomPoses(count) {
+    const library = state.trackingMode === 'chest' ? LEVELS_CHEST : LEVELS_HIPS;
+    const shuffled = [...library];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, count);
+  }
+
+  function startNewRun(){
+    state.levelIndex = 0;
+    state.times = [];
+    state.accuracies = [];
+    state.currentRunPoses = getRandomPoses(RUN_SIZE);
+    document.getElementById('hudCleared').textContent = `0 / ${RUN_SIZE}`;
+    Music.play();
+    show('screen-game');
+    initCameraAndPose().then(() => beginLevel(0)).catch(err => {
+      showGameError('Camera access failed: ' + err.message + '. Check your browser/camera permissions and try again.');
+    });
+  }
+
+
+  /* ---------------- Camera + Pose setup ---------------- */
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('outCanvas');
+  const ctx = canvas.getContext('2d');
+  const overlayMsg = document.getElementById('overlayMsg');
+
+  async function initCameraAndPose(){
+    if(!state.stream){
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ width:480, height:360, facingMode:'user' }, audio:false });
+      state.stream = stream;
+      video.srcObject = stream;
+      await video.play();
+      canvas.width = video.videoWidth || 480;
+      canvas.height = video.videoHeight || 360;
+    }
+    if(!state.poseModel && !state.poseFailed){
+      overlayMsg.style.display='flex';
+      overlayMsg.textContent = 'Loading pose model…';
+      try{
+        await loadPoseModel();
+      }catch(e){
+        state.poseFailed = true;
+        showGameError('Could not load the AI pose model from the network (this sandbox may be blocking it). You can still see your camera and target poses, but automatic matching is unavailable right now.');
+      }
+      overlayMsg.style.display='none';
+    }
+    if(!state.loopActive){
+      state.loopActive = true;
+      loop();
+    }
+  }
+
+  function loadPoseModel(){
+    return new Promise((resolve, reject) => {
+      if(typeof Pose === 'undefined'){ reject(new Error('MediaPipe Pose script did not load')); return; }
+      try{
+        const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}` });
+        pose.setOptions({ modelComplexity:0, smoothLandmarks:true, enableSegmentation:false, minDetectionConfidence:0.3, minTrackingConfidence:0.3 });
+        pose.onResults(onPoseResults);
+        state.poseModel = pose;
+        resolve();
+      }catch(e){ reject(e); }
+    });
+  }
+
+  function loop(ts){
+    state.rafId = requestAnimationFrame(loop);
+    if(!video.videoWidth) return;
+    // draw mirrored camera frame
+    ctx.save();
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    
+    const isGameActive = document.getElementById('screen-game').classList.contains('active');
+    if(state.poseModel && !state.poseFailed && isGameActive && !state.isProcessingPose){
+      const now = performance.now();
+      if(now - state.lastSendTs > 50){ // ~20fps to keep it smooth and responsive
+        state.lastSendTs = now;
+        state.isProcessingPose = true;
+        state.poseModel.send({ image: video })
+          .catch(e => console.warn("MediaPipe send error:", e))
+          .finally(() => { state.isProcessingPose = false; });
+      }
+    }
+    if(state.lastLandmarks) drawSkeleton(state.lastLandmarks);
+    try {
+      evaluateFrame();
+    } catch(e) {
+      console.error("Error in evaluateFrame:", e);
+    }
+  }
+
+  let nullFrameCount = 0;
+  function onPoseResults(results){
+    if (results && results.poseLandmarks) {
+      state.lastLandmarks = results.poseLandmarks;
+      nullFrameCount = 0;
+    } else {
+      nullFrameCount++;
+      // Only clear landmarks after 8 consecutive missing frames (~500ms) to prevent vector flickering
+      if (nullFrameCount > 8) {
+        state.lastLandmarks = null;
+      }
+    }
+  }
+
+  function drawSkeleton(lm){
+    if (!lm) return;
+    // Upper body only: shoulders, elbows, wrists, hips (hips only as a torso anchor)
+    const W=canvas.width, H=canvas.height;
+    const pairs = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24]];
+    ctx.strokeStyle = 'rgba(32,227,210,0.95)';
+    ctx.lineWidth = 5;
+    pairs.forEach(([a,b]) => {
+      const pa=lm[a], pb=lm[b];
+      if(!pa||!pb) return;
+      if(typeof pa.x !== 'number' || typeof pb.x !== 'number') return;
+      ctx.beginPath();
+      ctx.moveTo(pa.x*W, pa.y*H);
+      ctx.lineTo(pb.x*W, pb.y*H);
+      ctx.stroke();
+    });
+    ctx.fillStyle = 'rgba(255,46,126,0.95)';
+    [11,12,13,14,15,16,23,24].forEach(i => {
+      const p = lm[i];
+      if(!p || typeof p.x !== 'number') return;
+      ctx.beginPath();
+      ctx.arc(p.x*W, p.y*H, 6, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  /* ---------------- Angle / similarity math ---------------- */
+  function angleAt(B,A,C){
+    // angle at B between BA and BC, in degrees
+    const v1 = {x:A.x-B.x, y:A.y-B.y};
+    const v2 = {x:C.x-B.x, y:C.y-B.y};
+    const dot = v1.x*v2.x + v1.y*v2.y;
+    const m1 = Math.hypot(v1.x,v1.y), m2 = Math.hypot(v2.x,v2.y);
+    if(m1===0||m2===0) return 0;
+    let cos = dot/(m1*m2);
+    cos = Math.max(-1,Math.min(1,cos));
+    return Math.acos(cos) * 180/Math.PI;
+  }
+
+  function computeMetrics(lm){
+    if (!lm) return null;
+    const p = i => lm[i];
+    
+    // Only shoulders, elbows, and wrists are required for tracking arm poses!
+    const needed = [11,12,13,14,15,16];
+    if(!needed.every(i => lm[i] && typeof lm[i].x === 'number')) return null;
+
+    const shL=p(11), shR=p(12), elL=p(13), elR=p(14), wrL=p(15), wrR=p(16);
+    
+    // Project torso baseline vertically downwards from the shoulders
+    const hipL = { x: shL.x, y: shL.y + 0.3 };
+    const hipR = { x: shR.x, y: shR.y + 0.3 };
+
+    const shAngleL = angleAt(shL, hipL, elL);
+    const shAngleR = angleAt(shR, hipR, elR);
+    const elAngleL = angleAt(elL, shL, wrL);
+    const elAngleR = angleAt(elR, shR, wrR);
+
+    return { shAngleL, shAngleR, elAngleL, elAngleR };
+  }
+
+  function metricScore(actual, target, tol){
+    const diff = Math.abs(actual-target);
+    const ratio = diff/tol;
+    return Math.max(0, 100 - ratio*50);
+  }
+
+  function similarity(metrics, level){
+    const keys = ['shAngleL', 'shAngleR', 'elAngleL', 'elAngleR'];
+    const weights = { shAngleL: 0.25, shAngleR: 0.25, elAngleL: 0.25, elAngleR: 0.25 };
+    let total = 0;
+    keys.forEach(k => {
+      const s = metricScore(metrics[k], level.target[k], level.tol[k]);
+      total += s * weights[k];
+    });
+    return total;
+  }
+
+  /* ---------------- Level flow ---------------- */
+  function beginLevel(idx){
+    state.levelIndex = idx;
+    const lvl = state.currentRunPoses[idx];
+    document.getElementById('levelPill').textContent = `Pose ${idx+1} of ${RUN_SIZE}`;
+    document.getElementById('poseName').textContent = lvl.name;
+    document.getElementById('poseSvgHolder').innerHTML = lvl.svg;
+    document.getElementById('hudTimer').textContent = '0.0s';
+    document.getElementById('hudMatch').textContent = '0%';
+    
+    const meterFill = document.getElementById('meterFill');
+    meterFill.style.width = '0%';
+    meterFill.style.background = 'linear-gradient(90deg, var(--magenta), var(--cyan))';
+    meterFill.style.boxShadow = '0 0 8px var(--cyan)';
+    
+    document.getElementById('gameErr').style.display = 'none';
+    state.levelActive = false;
+    state.holdStartTs = 0;
+    runCountdown(3, () => {
+      overlayMsg.style.display = 'none';
+      state.levelActive = true;
+      state.levelStartTs = performance.now();
+    });
+  }
+
+  function runCountdown(n, done){
+    state.countdownActive = true;
+    overlayMsg.style.display='flex';
+    overlayMsg.style.background = 'rgba(10, 9, 18, 0.85)';
+    if (n > 0) {
+      overlayMsg.innerHTML = `<div><div style="font-family:var(--mono);font-size:14px;letter-spacing:3px;color:var(--muted);margin-bottom:6px;">GET READY</div><div class="countdown-num">${n}</div></div>`;
+      Sound.playBeep(false);
+      setTimeout(() => runCountdown(n-1, done), 800);
+    } else {
+      Sound.playBeep(true);
+      state.countdownActive = false;
+      done();
+    }
+  }
+
+  function evaluateFrame(){
+    if(state.countdownActive) return;
+    
+    // Tick the timer continuously during gameplay
+    const elapsed = (performance.now() - state.levelStartTs)/1000;
+    document.getElementById('hudTimer').textContent = elapsed.toFixed(1)+'s';
+
+    if(!state.levelActive) return;
+
+    const lm = state.lastLandmarks;
+    const metrics = computeMetrics(lm);
+    if(!metrics){
+      document.getElementById('hudMatch').textContent = '0%';
+      document.getElementById('meterFill').style.width = '0%';
+      document.getElementById('meterFill').style.background = 'linear-gradient(90deg, var(--magenta), var(--cyan))';
+      document.getElementById('meterFill').style.boxShadow = '0 0 8px var(--cyan)';
+      state.holdStartTs = 0;
+      return;
+    }
+
+    const lvl = state.currentRunPoses[state.levelIndex];
+    const sim = similarity(metrics, lvl);
+    document.getElementById('hudMatch').textContent = Math.round(sim)+'%';
+    
+    const meterFill = document.getElementById('meterFill');
+    meterFill.style.width = Math.max(0,Math.min(100,sim)).toFixed(0)+'%';
+    
+    if (sim >= THRESHOLD) {
+      meterFill.style.background = 'linear-gradient(90deg, var(--cyan), #ffffff)';
+      meterFill.style.boxShadow = '0 0 15px #ffffff, 0 0 5px var(--cyan)';
+      
+      if(!state.holdStartTs) state.holdStartTs = performance.now();
+      if(performance.now() - state.holdStartTs >= HOLD_MS){
+        completeLevel(elapsed, sim);
+      }
+    } else {
+      meterFill.style.background = 'linear-gradient(90deg, var(--magenta), var(--cyan))';
+      meterFill.style.boxShadow = '0 0 8px var(--cyan)';
+      state.holdStartTs = 0;
+    }
+  }
+
+  function completeLevel(elapsed, sim){
+    state.levelActive = false;
+    state.times.push(elapsed);
+    state.accuracies.push(sim);
+    
+    Sound.playSuccess();
+    
+    const flash = document.getElementById('flashSuccess');
+    flash.style.display='flex';
+    flash.textContent = 'MATCHED!';
+    document.getElementById('hudCleared').textContent = `${state.times.length} / ${RUN_SIZE}`;
+    
+    // Show meme after brief flash
+    setTimeout(() => {
+      flash.style.display='none';
+      const lvl = state.currentRunPoses[state.levelIndex];
+      const memeFile = POSE_MEMES[lvl.name] || 'meme_victory_1784569030400.png';
+      document.getElementById('memePoseName').textContent = lvl.name;
+      const memeImg = document.getElementById('memeImg');
+      memeImg.src = memeFile;
+      const bar = document.getElementById('memeBar');
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      const memeEl = document.getElementById('memeOverlay');
+      memeEl.style.display = 'flex';
+      memeEl.classList.remove('hiding');
+      Sound.playMemeForPose(lvl.name);
+      // Animate progress bar over 2s
+      requestAnimationFrame(() => {
+        bar.style.transition = 'width 2s linear';
+        bar.style.width = '100%';
+      });
+      setTimeout(() => {
+        memeEl.classList.add('hiding');
+        setTimeout(() => {
+          memeEl.style.display = 'none';
+          memeEl.classList.remove('hiding');
+          if(state.levelIndex+1 < RUN_SIZE){
+            Sound.playLevelComplete();
+            beginLevel(state.levelIndex+1);
+          } else {
+            startConfettiCelebration();
+          }
+        }, 320);
+      }, 2000);
+    }, 700);
+  }
+
+  function finishRun(){
+    stopEverything(false);
+    const totalTime = state.times.reduce((a,b)=>a+b,0);
+    const avgAcc = state.accuracies.reduce((a,b)=>a+b,0)/state.accuracies.length;
+    document.getElementById('resultsName').textContent = state.username;
+    document.getElementById('resTotalTime').textContent = totalTime.toFixed(1)+'s';
+    document.getElementById('resAvgAcc').textContent = Math.round(avgAcc)+'%';
+    document.getElementById('resLevels').textContent = `${state.times.length}/${RUN_SIZE}`;
+    state._pendingResult = { totalTime, avgAcc, levels: state.times.length };
+    show('screen-results');
+  }
+
+  function stopEverything(isQuit = false){
+    if (isQuit) {
+      Music.stop();
+    }
+    if(state.rafId) cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+    state.loopActive = false;
+    if(state.stream){
+      state.stream.getTracks().forEach(t => t.stop());
+      state.stream = null;
+    }
+    state.levelActive = false;
+    state.countdownActive = false;
+    state.waitingForBody = false;
+    state.lastLandmarks = null;
+  }
+
+  function showGameError(msg){
+    const el = document.getElementById('gameErr');
+    el.style.display='block';
+    el.textContent = msg;
+  }
+
+  /* ---------------- Confetti Particles ---------------- */
+  class ConfettiParticle {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * -canvas.height - 20;
+      this.size = Math.random() * 8 + 6;
+      this.color = ['#ff2e7e', '#20e3d2', '#8b5cf6', '#ffc145', '#ff9f1c', '#00f6ff'][Math.floor(Math.random() * 6)];
+      this.speedY = Math.random() * 3 + 2;
+      this.speedX = Math.random() * 4 - 2;
+      this.rotation = Math.random() * 360;
+      this.rotationSpeed = Math.random() * 4 - 2;
+    }
+    update() {
+      this.y += this.speedY;
+      this.x += this.speedX;
+      this.rotation += this.rotationSpeed;
+      if (this.y > this.canvas.height) {
+        this.y = -20;
+        this.x = Math.random() * this.canvas.width;
+      }
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation * Math.PI / 180);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+      ctx.restore();
+    }
+  }
+
+  let confettiActive = false;
+  let confettiParticles = [];
+  let confettiCanvas = null;
+  let confettiCtx = null;
+  let confettiRafId = null;
+
+  function initConfetti() {
+    confettiCanvas = document.getElementById('confettiCanvas');
+    confettiCtx = confettiCanvas.getContext('2d');
+    resizeConfettiCanvas();
+    window.addEventListener('resize', resizeConfettiCanvas);
+  }
+
+  function resizeConfettiCanvas() {
+    if (confettiCanvas) {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+  }
+
+  function startConfetti() {
+    confettiActive = true;
+    confettiParticles = [];
+    resizeConfettiCanvas();
+    for (let i = 0; i < 150; i++) {
+      confettiParticles.push(new ConfettiParticle(confettiCanvas));
+    }
+    
+    Sound.playConfettiPop();
+    const popInterval = setInterval(() => {
+      if (confettiActive) Sound.playConfettiPop();
+      else clearInterval(popInterval);
+    }, 1000);
+    
+    animateConfetti();
+  }
+
+  function stopConfetti() {
+    confettiActive = false;
+    if (confettiRafId) cancelAnimationFrame(confettiRafId);
+    if (confettiCtx && confettiCanvas) {
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
+
+  function animateConfetti() {
+    if (!confettiActive) return;
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    confettiParticles.forEach(p => {
+      p.update();
+      p.draw(confettiCtx);
+    });
+    confettiRafId = requestAnimationFrame(animateConfetti);
+  }
+
+  function startConfettiCelebration() {
+    stopEverything(false);
+    Music.fadeOut(1500);
+    
+    Sound.playVictoryFanfare();
+    startConfetti();
+    
+    overlayMsg.style.display = 'flex';
+    overlayMsg.innerHTML = `
+      <div style="animation: pop 0.6s ease infinite alternate; text-align: center;">
+        <div style="font-family: var(--display); font-size: 64px; color: var(--amber); text-shadow: 0 0 20px rgba(255, 193, 69, 0.8);">VICTORY!</div>
+        <div style="font-family: var(--mono); font-size: 16px; color: var(--cyan); letter-spacing: 2px; margin-top: 10px;">YOU ARE THE DANCE CHAMELEON!</div>
+      </div>
+    `;
+    
+    setTimeout(() => {
+      stopConfetti();
+      finishRun();
+    }, 5000);
+  }
+
+
+  /* ---------------- Leaderboard — stored locally in localStorage ---------------- */
+  let memoryEntries = [];
+  try {
+    const stored = localStorage.getItem('dance-chameleon-leaderboard');
+    if (stored) {
+      memoryEntries = JSON.parse(stored);
+    }
+  } catch(e) {
+    console.error('Failed to load leaderboard from localStorage', e);
+  }
+
+  function setFileInfo(msg){
+    const el = document.getElementById('fileInfo');
+    if(el) el.textContent = msg;
+  }
+
+  document.getElementById('btnSaveScore').addEventListener('click', () => {
+    const btn = document.getElementById('btnSaveScore');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const r = state._pendingResult;
+    const entry = {
+      username: state.username,
+      totalTime: r.totalTime,
+      avgAccuracy: r.avgAcc,
+      levels: r.levels,
+      date: new Date().toISOString()
+    };
+    try {
+      memoryEntries.push(entry);
+      localStorage.setItem('dance-chameleon-leaderboard', JSON.stringify(memoryEntries));
+    } catch(e) {
+      console.error('Save error', e);
+    }
+    btn.disabled = false; btn.textContent = 'Save & View Leaderboard';
+    show('screen-leaderboard');
+    loadLeaderboard(entry);
+  });
+
+  document.getElementById('btnClearLb').addEventListener('click', () => {
+    if(confirm('Are you sure you want to delete all leaderboard history? This cannot be undone.')){
+      memoryEntries = [];
+      localStorage.removeItem('dance-chameleon-leaderboard');
+      loadLeaderboard();
+    }
+  });
+
+  function loadLeaderboard(justSaved){
+    const body = document.getElementById('lbBody');
+    const empty = document.getElementById('lbEmpty');
+    empty.style.display = 'none';
+    let entries = memoryEntries.filter(e => e && e.levels === RUN_SIZE);
+    entries.sort((a,b) => a.totalTime - b.totalTime || b.avgAccuracy - a.avgAccuracy);
+    body.innerHTML = '';
+    if(entries.length===0){ empty.style.display='block'; return; }
+    entries.slice(0,25).forEach((e,i) => {
+      const tr = document.createElement('tr');
+      const isMe = justSaved && e.username===justSaved.username && Math.abs(e.totalTime-justSaved.totalTime)<0.01;
+      if(isMe) tr.classList.add('me');
+      const rankClass = i===0?'rank1':(i===1?'rank2':(i===2?'rank3':''));
+      tr.innerHTML = `<td class="${rankClass}">${i+1}</td><td>${escapeHtml(e.username)}</td><td>${e.totalTime.toFixed(1)}s</td><td>${Math.round(e.avgAccuracy)}%</td><td>${e.levels}/${RUN_SIZE}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  /* init */
+  initConfetti();
+  
+  document.getElementById('btnSkipPose').addEventListener('click', () => {
+    const library = state.trackingMode === 'chest' ? LEVELS_CHEST : LEVELS_HIPS;
+    const currentNames = state.currentRunPoses.map(p => p.name);
+    const unused = library.filter(p => !currentNames.includes(p.name));
+    if (unused.length === 0) return;
+    
+    const newPose = unused[Math.floor(Math.random() * unused.length)];
+    state.currentRunPoses[state.levelIndex] = newPose;
+    
+    document.getElementById('poseName').textContent = newPose.name;
+    document.getElementById('poseSvgHolder').innerHTML = newPose.svg;
+    state.holdStartTs = 0;
+  });
+
+  // Globally listen for button clicks to play click SFX
+  document.addEventListener('click', e => {
+    if (e.target.closest('button')) {
+      Sound.playClick();
+    }
+  });
+
+  usernameInput.focus();
+})();
+</script>
+</body>
+</html>
