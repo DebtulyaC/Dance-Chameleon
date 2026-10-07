@@ -22,10 +22,6 @@ During a run, the player:
 
 The game is designed around quick feedback and simple controls, so it can be played directly from a modern web browser without installing a separate application.
 
-## Live Demo
-
-https://dance-chameleon.onrender.com
-
 The application is deployed as a web service on Render.
 
 ## Features
